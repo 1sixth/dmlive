@@ -1,4 +1,6 @@
 // from SocialSisterYi/bilibili-API-collect
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use rand::distr::{Alphanumeric, SampleString};
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -45,6 +47,31 @@ fn get_url_encoded(s: &str) -> String {
             }
         })
         .collect::<String>()
+}
+
+// Match yt-dlp's BilibiliBaseIE._dm_params browser fingerprint parameters:
+// https://github.com/yt-dlp/yt-dlp/blob/e8de28e23c1ecb4a12b2c3dec188c07e998c412c/yt_dlp/extractor/bilibili.py
+pub fn get_dm_params() -> Vec<(&'static str, String)> {
+    let image = |len| {
+        let mut encoded = STANDARD.encode(Alphanumeric.sample_string(&mut rand::rng(), len));
+        encoded.truncate(encoded.len() - 2);
+        encoded
+    };
+    let wh_nonce = rand::random_range(0..114);
+    let of_nonce = rand::random_range(0..514);
+    let scroll_top = rand::random_range(0..101);
+    // Encode a 1920x1080 screen and no mouse events, as for a newly opened player.
+    let inter = serde_json::json!({
+        "ds": [],
+        "wh": [6000 + 3 * wh_nonce, 6600 + wh_nonce, wh_nonce],
+        "of": [3 * scroll_top + of_nonce, 4 * scroll_top + 2 * of_nonce, of_nonce],
+    });
+    vec![
+        ("dm_img_list", "[]".into()),
+        ("dm_img_str", image(rand::random_range(16..=64))),
+        ("dm_cover_img_str", image(rand::random_range(32..=128))),
+        ("dm_img_inter", inter.to_string()),
+    ]
 }
 
 // 为请求参数进行 wbi 签名

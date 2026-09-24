@@ -315,7 +315,7 @@ impl Bilibili {
             // let j: serde_json::Value =
             //     serde_json::from_str(re.captures(&resp).ok_or_else(|| dmlerr!())?[1].to_string().as_ref())?;
             let keys = crate::utils::bili_wbi::get_wbi_keys(&cookies).await?;
-            let params2 = vec![
+            let mut params2 = vec![
                 ("bvid", bvid),
                 ("cid", cid.clone()),
                 ("qn", String::from("0")),
@@ -323,9 +323,19 @@ impl Bilibili {
                 ("fnver", String::from("0")),
                 ("fourk", String::from("1")),
             ];
+            params2.extend(crate::utils::bili_wbi::get_dm_params());
+            let is_logged_in = cookies
+                .split(';')
+                .filter_map(|cookie| cookie.trim().split_once('='))
+                .any(|(name, value)| name.trim() == "SESSDATA" && !value.trim().is_empty());
+            if !is_logged_in {
+                params2.push(("try_look", String::from("1")));
+            }
             let query = crate::utils::bili_wbi::encode_wbi(params2, keys);
             let j = client
                 .get(format!("{}?{}", BILI_APIV, query))
+                .header("Referer", "https://www.bilibili.com/")
+                .header("Origin", "https://www.bilibili.com")
                 .header("Cookie", &cookies)
                 .send()
                 .await?
