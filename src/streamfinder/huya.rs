@@ -19,7 +19,9 @@ fn gen_n_number(l: u8) -> String {
 }
 
 fn gen_params(anti_code: &str, stream_name: &str) -> String {
-    let mut query: HashMap<String, String> = form_urlencoded::parse(anti_code.as_bytes()).into_owned().collect();
+    let mut query: HashMap<String, String> = form_urlencoded::parse(anti_code.as_bytes())
+        .into_owned()
+        .collect();
 
     let uid = gen_n_number(13).parse::<u64>().unwrap();
     // Match the web client that supplied the anti-code. Mixing in mini-app
@@ -30,7 +32,12 @@ fn gen_params(anti_code: &str, stream_name: &str) -> String {
     let ws_time = query.get("wsTime").unwrap().to_string();
     let seq_id = format!("{}", (chrono::Utc::now().timestamp_millis() + uid as i64));
 
-    let fm = String::from_utf8(general_purpose::STANDARD.decode(query.get("fm").unwrap()).unwrap()).unwrap();
+    let fm = String::from_utf8(
+        general_purpose::STANDARD
+            .decode(query.get("fm").unwrap())
+            .unwrap(),
+    )
+    .unwrap();
     let ws_secret_prefix = fm.split("_").next().unwrap();
     let ws_secret_hash = format!(
         "{:x}",
@@ -43,8 +50,10 @@ fn gen_params(anti_code: &str, stream_name: &str) -> String {
             .as_bytes()
         )
     );
-    let ws_secret =
-        md5::compute(format!("{ws_secret_prefix}_{convert_uid}_{stream_name}_{ws_secret_hash}_{ws_time}",).as_bytes());
+    let ws_secret = md5::compute(
+        format!("{ws_secret_prefix}_{convert_uid}_{stream_name}_{ws_secret_hash}_{ws_time}",)
+            .as_bytes(),
+    );
     let ws_secret = format!("{ws_secret:x}",);
 
     let mut params = vec![
@@ -75,11 +84,14 @@ fn gen_params(anti_code: &str, stream_name: &str) -> String {
     }
 
     log::info!("huya params: {params:?}");
-    form_urlencoded::Serializer::new(String::new()).extend_pairs(params).finish()
+    form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(params)
+        .finish()
 }
 
 pub async fn get_live_info(
-    client: &reqwest::Client, url: &str,
+    client: &reqwest::Client,
+    url: &str,
 ) -> anyhow::Result<(String, String, String, bool, String)> {
     let resp = client
         .get(url)
@@ -92,17 +104,44 @@ pub async fn get_live_info(
     let re = Regex::new(r#"(?m)(?s)hyPlayerConfig.*?stream:(.*?)\s*};"#).unwrap();
     let re1 = Regex::new(r"var\s+TT_PROFILE_INFO\s+=\s+(.+\});").unwrap();
     let re2 = Regex::new(r"var\s+TT_ROOM_DATA\s+=\s+(.+\});").unwrap();
-    let j: serde_json::Value =
-        serde_json::from_str(re.captures(&resp).and_then(|x| x.get(1)).ok_or_else(|| dmlerr!())?.as_str())?;
-    let j1: serde_json::Value =
-        serde_json::from_str(re1.captures(&resp).and_then(|x| x.get(1)).ok_or_else(|| dmlerr!())?.as_str())?;
-    let j2: serde_json::Value =
-        serde_json::from_str(re2.captures(&resp).and_then(|x| x.get(1)).ok_or_else(|| dmlerr!())?.as_str())?;
-    let title = j2.pointer("/introduction").and_then(|x| x.as_str()).unwrap_or("没有直播标题");
-    let nick = j1.pointer("/nick").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-    let avatar = j1.pointer("/avatar").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-    let cover = j2.pointer("/screenshot").and_then(|x| x.as_str()).unwrap_or(avatar);
-    let is_living = j2.pointer("/isOn").and_then(|x| x.as_bool()).ok_or_else(|| dmlerr!())?;
+    let j: serde_json::Value = serde_json::from_str(
+        re.captures(&resp)
+            .and_then(|x| x.get(1))
+            .ok_or_else(|| dmlerr!())?
+            .as_str(),
+    )?;
+    let j1: serde_json::Value = serde_json::from_str(
+        re1.captures(&resp)
+            .and_then(|x| x.get(1))
+            .ok_or_else(|| dmlerr!())?
+            .as_str(),
+    )?;
+    let j2: serde_json::Value = serde_json::from_str(
+        re2.captures(&resp)
+            .and_then(|x| x.get(1))
+            .ok_or_else(|| dmlerr!())?
+            .as_str(),
+    )?;
+    let title = j2
+        .pointer("/introduction")
+        .and_then(|x| x.as_str())
+        .unwrap_or("没有直播标题");
+    let nick = j1
+        .pointer("/nick")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
+    let avatar = j1
+        .pointer("/avatar")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
+    let cover = j2
+        .pointer("/screenshot")
+        .and_then(|x| x.as_str())
+        .unwrap_or(avatar);
+    let is_living = j2
+        .pointer("/isOn")
+        .and_then(|x| x.as_bool())
+        .ok_or_else(|| dmlerr!())?;
     let cover = if cover.starts_with("//") {
         format!("https:{cover}")
     } else {
@@ -110,14 +149,20 @@ pub async fn get_live_info(
     };
 
     let vurl = if is_living {
-        let flv_anti_code =
-            j.pointer("/data/0/gameStreamInfoList/0/sFlvAntiCode").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-        let stream_name =
-            j.pointer("/data/0/gameStreamInfoList/0/sStreamName").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
+        let flv_anti_code = j
+            .pointer("/data/0/gameStreamInfoList/0/sFlvAntiCode")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?;
+        let stream_name = j
+            .pointer("/data/0/gameStreamInfoList/0/sStreamName")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?;
         let p = gen_params(flv_anti_code, stream_name);
         let vurl = format!(
             "{}/{stream_name}.{}?{p}",
-            j.pointer("/data/0/gameStreamInfoList/0/sFlvUrl").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?,
+            j.pointer("/data/0/gameStreamInfoList/0/sFlvUrl")
+                .and_then(|x| x.as_str())
+                .ok_or_else(|| dmlerr!())?,
             j.pointer("/data/0/gameStreamInfoList/0/sFlvUrlSuffix")
                 .and_then(|x| x.as_str())
                 .ok_or_else(|| dmlerr!())?,

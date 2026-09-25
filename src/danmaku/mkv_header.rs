@@ -46,7 +46,13 @@ impl DMKVCluster {
         self.cluster_size = 10 as u64 | 0x0100_0000_0000_0000;
     }
 
-    pub fn add_ass_block(&mut self, ts: u64, ass: Vec<u8>, speed: u64, track_number: u8) -> Result<()> {
+    pub fn add_ass_block(
+        &mut self,
+        ts: u64,
+        ass: Vec<u8>,
+        speed: u64,
+        track_number: u8,
+    ) -> Result<()> {
         let ass_len = ass.len();
         let b = MKVBlockGroup {
             block_group_id: 0xa0,

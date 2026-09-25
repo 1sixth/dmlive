@@ -27,8 +27,16 @@ fn get_param(vid: &str, cid: &str) -> String {
     let b15 = crate::utils::nm(15, 0);
 
     let s1_3: Vec<u8> = crate::utils::rs(1, vid.as_bytes());
-    let s1_5 = [crate::utils::rs(1, cid.as_bytes()), crate::utils::rs(2, vid.as_bytes())].concat();
-    let s1 = [crate::utils::rs(3, s1_3.as_ref()), crate::utils::rs(5, s1_5.as_ref())].concat();
+    let s1_5 = [
+        crate::utils::rs(1, cid.as_bytes()),
+        crate::utils::rs(2, vid.as_bytes()),
+    ]
+    .concat();
+    let s1 = [
+        crate::utils::rs(3, s1_3.as_ref()),
+        crate::utils::rs(5, s1_5.as_ref()),
+    ]
+    .concat();
     let s3 = crate::utils::rs(48687757, crate::utils::rs(1, vid.as_bytes()).as_ref());
     let header = [
         crate::utils::rs(1, s1.as_ref()),
@@ -62,11 +70,13 @@ fn get_param(vid: &str, cid: &str) -> String {
     let str19 = crate::utils::rs(19, crate::utils::nm(1, 0).as_ref());
     let timestamp5 = crate::utils::nm(20, ts);
     let entity = [
-        header, timestamp1, s6, s7, s8, body, timestamp3, timestamp4, s13, chattype, s17, str19, timestamp5,
+        header, timestamp1, s6, s7, s8, body, timestamp3, timestamp4, s13, chattype, s17, str19,
+        timestamp5,
     ]
     .concat();
     let continuation = crate::utils::rs(119693434, entity.as_ref());
-    url::form_urlencoded::byte_serialize(general_purpose::URL_SAFE.encode(continuation).as_bytes()).collect()
+    url::form_urlencoded::byte_serialize(general_purpose::URL_SAFE.encode(continuation).as_bytes())
+        .collect()
 }
 
 pub struct Youtube {
@@ -77,7 +87,10 @@ pub struct Youtube {
 impl Youtube {
     pub fn new() -> Self {
         Youtube {
-            key: String::from_utf8_lossy(general_purpose::STANDARD.decode(YTB_KEY).unwrap().as_ref()).to_string(),
+            key: String::from_utf8_lossy(
+                general_purpose::STANDARD.decode(YTB_KEY).unwrap().as_ref(),
+            )
+            .to_string(),
             ua: utils::gen_ua(),
         }
     }
@@ -110,32 +123,57 @@ impl Youtube {
             .text()
             .await?;
         let re = Regex::new(r"ytInitialPlayerResponse\s*=\s*(\{.+?\});.*?</script>").unwrap();
-        let j: serde_json::Value = serde_json::from_str(&re.captures(&resp).ok_or_else(|| dmlerr!())?[1])?;
-        let vid = j.pointer("/videoDetails/videoId").ok_or_else(|| dmlerr!())?.as_str().unwrap().to_string();
-        let cid = j.pointer("/videoDetails/channelId").ok_or_else(|| dmlerr!())?.as_str().unwrap().to_string();
+        let j: serde_json::Value =
+            serde_json::from_str(&re.captures(&resp).ok_or_else(|| dmlerr!())?[1])?;
+        let vid = j
+            .pointer("/videoDetails/videoId")
+            .ok_or_else(|| dmlerr!())?
+            .as_str()
+            .unwrap()
+            .to_string();
+        let cid = j
+            .pointer("/videoDetails/channelId")
+            .ok_or_else(|| dmlerr!())?
+            .as_str()
+            .unwrap()
+            .to_string();
         // println!("{} {}", &vid, &cid);
         Ok((vid, cid))
     }
 
     fn decode_msg(&self, j: &Value) -> anyhow::Result<DMLDanmaku> {
-        let renderer = j.pointer("/addChatItemAction/item/liveChatTextMessageRenderer").ok_or_else(|| dmlerr!())?;
+        let renderer = j
+            .pointer("/addChatItemAction/item/liveChatTextMessageRenderer")
+            .ok_or_else(|| dmlerr!())?;
         let nick = renderer
             .pointer("/authorName/simpleText")
             .ok_or_else(|| dmlerr!())?
             .as_str()
             .ok_or_else(|| dmlerr!())?
             .to_string();
-        let runs = renderer.pointer("/message/runs").ok_or_else(|| dmlerr!())?.as_array().ok_or_else(|| dmlerr!())?;
+        let runs = renderer
+            .pointer("/message/runs")
+            .ok_or_else(|| dmlerr!())?
+            .as_array()
+            .ok_or_else(|| dmlerr!())?;
         let mut msg = "".to_owned();
         for r in runs {
             match r.pointer("/emoji") {
                 Some(it) => {
                     msg.push_str(
-                        it.pointer("/shortcuts/0").ok_or_else(|| dmlerr!())?.as_str().ok_or_else(|| dmlerr!())?,
+                        it.pointer("/shortcuts/0")
+                            .ok_or_else(|| dmlerr!())?
+                            .as_str()
+                            .ok_or_else(|| dmlerr!())?,
                     );
                 }
                 None => {
-                    msg.push_str(r.pointer("/text").ok_or_else(|| dmlerr!())?.as_str().ok_or_else(|| dmlerr!())?);
+                    msg.push_str(
+                        r.pointer("/text")
+                            .ok_or_else(|| dmlerr!())?
+                            .as_str()
+                            .ok_or_else(|| dmlerr!())?,
+                    );
                 }
             }
         }
@@ -149,7 +187,11 @@ impl Youtube {
         Ok(dml_dm)
     }
 
-    async fn get_single_chat(&self, ctn: &mut String, client: &Client) -> anyhow::Result<Vec<DMLDanmaku>> {
+    async fn get_single_chat(
+        &self,
+        ctn: &mut String,
+        client: &Client,
+    ) -> anyhow::Result<Vec<DMLDanmaku>> {
         let mut ret = Vec::new();
         let body = json!({
             "context": {
@@ -176,8 +218,9 @@ impl Youtube {
 
         ctn.clear();
         // println!("{:#?}", &resp);
-        let con =
-            resp.pointer("/continuationContents/liveChatContinuation/continuations/0").ok_or_else(|| dmlerr!())?;
+        let con = resp
+            .pointer("/continuationContents/liveChatContinuation/continuations/0")
+            .ok_or_else(|| dmlerr!())?;
 
         // println!("{:#?}", &con);
         let metadata = match con.pointer("/invalidationContinuationData") {
@@ -186,11 +229,19 @@ impl Youtube {
                 Some(it) => it,
                 None => match con.pointer("/reloadContinuationData") {
                     Some(it) => it,
-                    None => con.pointer("/liveChatReplayContinuationData").ok_or_else(|| dmlerr!())?,
+                    None => con
+                        .pointer("/liveChatReplayContinuationData")
+                        .ok_or_else(|| dmlerr!())?,
                 },
             },
         };
-        ctn.push_str(metadata.pointer("/continuation").ok_or_else(|| dmlerr!())?.as_str().ok_or_else(|| dmlerr!())?);
+        ctn.push_str(
+            metadata
+                .pointer("/continuation")
+                .ok_or_else(|| dmlerr!())?
+                .as_str()
+                .ok_or_else(|| dmlerr!())?,
+        );
         let actions = resp
             .pointer("/continuationContents/liveChatContinuation/actions")
             .ok_or_else(|| dmlerr!())?
@@ -205,9 +256,15 @@ impl Youtube {
         Ok(ret)
     }
 
-    pub async fn run(&self, url: &str, dtx: async_channel::Sender<DMLDanmaku>) -> anyhow::Result<()> {
-        let client =
-            reqwest::Client::builder().user_agent(self.ua.clone()).connect_timeout(Duration::from_secs(10)).build()?;
+    pub async fn run(
+        &self,
+        url: &str,
+        dtx: async_channel::Sender<DMLDanmaku>,
+    ) -> anyhow::Result<()> {
+        let client = reqwest::Client::builder()
+            .user_agent(self.ua.clone())
+            .connect_timeout(Duration::from_secs(10))
+            .build()?;
         let (vid, cid) = self.get_room_info(url, &client).await?;
         let mut ctn = get_param(&vid, &cid);
 
@@ -222,7 +279,8 @@ impl Youtube {
             let itvl: u64;
             match self.get_single_chat(&mut ctn, &client).await {
                 Ok(mut dm) => {
-                    itvl = 2000usize.saturating_div(if dm.len() == 0 { 1 } else { dm.len() }) as u64;
+                    itvl =
+                        2000usize.saturating_div(if dm.len() == 0 { 1 } else { dm.len() }) as u64;
                     for d in dm.drain(..) {
                         dtx.send(d).await?;
                         if itvl < 50 {

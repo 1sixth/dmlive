@@ -57,7 +57,11 @@ impl Huya {
 
     async fn get_ws_info(&self, url: &str) -> anyhow::Result<(String, Bytes)> {
         let url = Url::parse(url)?;
-        let rid = url.path_segments().ok_or_else(|| dmlerr!())?.last().ok_or_else(|| dmlerr!())?;
+        let rid = url
+            .path_segments()
+            .ok_or_else(|| dmlerr!())?
+            .last()
+            .ok_or_else(|| dmlerr!())?;
         let client = reqwest::Client::new();
         let resp = client
             .get(format!("https://www.huya.com/{}", &rid))
@@ -68,8 +72,13 @@ impl Huya {
             .text()
             .await?;
         let re = Regex::new(r"var\s+TT_PROFILE_INFO\s+=\s+(.+\});").unwrap();
-        let j: serde_json::Value = serde_json::from_str(&re.captures(&resp).ok_or_else(|| dmlerr!())?[1])?;
-        let ayyuid = j.pointer("/lp").ok_or_else(|| dmlerr!())?.to_string().replace(r#"""#, "");
+        let j: serde_json::Value =
+            serde_json::from_str(&re.captures(&resp).ok_or_else(|| dmlerr!())?[1])?;
+        let ayyuid = j
+            .pointer("/lp")
+            .ok_or_else(|| dmlerr!())?
+            .to_string()
+            .replace(r#"""#, "");
 
         let mut t = Vec::new();
         t.push(format!("live:{}", ayyuid));
@@ -90,9 +99,17 @@ impl Huya {
         // println!("{}", String::from_utf8_lossy(&data));
         let mut ios = TarsDecoder::from(&data);
         if ios.read_int32(0, false, -1)? == 7 {
-            let mut ios = TarsDecoder::from(&ios.read_bytes(1, false, tars_stream::bytes::Bytes::from(""))?);
+            let mut ios = TarsDecoder::from(&ios.read_bytes(
+                1,
+                false,
+                tars_stream::bytes::Bytes::from(""),
+            )?);
             if ios.read_int64(1, false, -1)? == 1400 {
-                let mut ios = TarsDecoder::from(&ios.read_bytes(2, false, tars_stream::bytes::Bytes::from(""))?);
+                let mut ios = TarsDecoder::from(&ios.read_bytes(
+                    2,
+                    false,
+                    tars_stream::bytes::Bytes::from(""),
+                )?);
                 let user = ios.read_struct(
                     0,
                     false,
@@ -127,11 +144,17 @@ impl Huya {
         Ok(ret)
     }
 
-    pub async fn run(&self, url: &str, dtx: async_channel::Sender<DMLDanmaku>) -> anyhow::Result<()> {
+    pub async fn run(
+        &self,
+        url: &str,
+        dtx: async_channel::Sender<DMLDanmaku>,
+    ) -> anyhow::Result<()> {
         let (ws, reg_data) = self.get_ws_info(url).await?;
         let (ws_stream, _) = connect_async(&ws).await?;
         let (mut ws_write, mut ws_read) = ws_stream.split();
-        ws_write.send(tokio_tungstenite::tungstenite::Message::Binary(reg_data)).await?;
+        ws_write
+            .send(tokio_tungstenite::tungstenite::Message::Binary(reg_data))
+            .await?;
         let hb_task = async {
             while let Ok(_) = ws_write.send(Binary(HEARTBEAT.into())).await {
                 sleep(Duration::from_secs(20)).await;

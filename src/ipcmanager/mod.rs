@@ -137,18 +137,33 @@ impl IPCManager {
         //     let (s, _) = self.danmaku_unix_listener.as_ref().ok_or_else(|| dmlerr!())?.accept().await?;
         //     Ok(Box::new(s))
         // } else {
-        let (s, _) = self.danmaku_tcp_listener.as_ref().ok_or_else(|| dmlerr!())?.accept().await?;
+        let (s, _) = self
+            .danmaku_tcp_listener
+            .as_ref()
+            .ok_or_else(|| dmlerr!())?
+            .accept()
+            .await?;
         Ok(Box::new(s))
         // }
     }
 
     pub async fn get_video_socket(&self) -> Result<Box<dyn DMLStream>> {
-        let (s, _) = self.video_tcp_listener.as_ref().ok_or_else(|| dmlerr!())?.accept().await?;
+        let (s, _) = self
+            .video_tcp_listener
+            .as_ref()
+            .ok_or_else(|| dmlerr!())?
+            .accept()
+            .await?;
         Ok(Box::new(s))
     }
 
     pub async fn get_audio_socket(&self) -> Result<Box<dyn DMLStream>> {
-        let (s, _) = self.audio_tcp_listener.as_ref().ok_or_else(|| dmlerr!())?.accept().await?;
+        let (s, _) = self
+            .audio_tcp_listener
+            .as_ref()
+            .ok_or_else(|| dmlerr!())?
+            .accept()
+            .await?;
         Ok(Box::new(s))
     }
 }

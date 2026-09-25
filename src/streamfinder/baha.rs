@@ -30,9 +30,23 @@ impl Baha {
             .connect_timeout(tokio::time::Duration::from_secs(10))
             .build()?;
         let params1 = vec![("videoSn", sn.as_str())];
-        let j = client.get(format!("{}", BAHA_API1)).query(&params1).send().await?.json::<serde_json::Value>().await?;
-        let title = j.pointer("/data/anime/title").ok_or_else(|| dmlerr!())?.as_str().unwrap();
-        let episodes = j.pointer("/data/anime/episodes/0").ok_or_else(|| dmlerr!())?.as_array().unwrap();
+        let j = client
+            .get(format!("{}", BAHA_API1))
+            .query(&params1)
+            .send()
+            .await?
+            .json::<serde_json::Value>()
+            .await?;
+        let title = j
+            .pointer("/data/anime/title")
+            .ok_or_else(|| dmlerr!())?
+            .as_str()
+            .unwrap();
+        let episodes = j
+            .pointer("/data/anime/episodes/0")
+            .ok_or_else(|| dmlerr!())?
+            .as_array()
+            .unwrap();
         let mut page = self.ctx.cm.bvideo_info.borrow().current_page;
         if page == 0 {
             page = 1;
@@ -44,7 +58,12 @@ impl Baha {
                 episodes.last().ok_or_else(|| dmlerr!())?
             }
         };
-        let sn = ep.pointer("/videoSn").ok_or_else(|| dmlerr!())?.as_u64().unwrap().to_string();
+        let sn = ep
+            .pointer("/videoSn")
+            .ok_or_else(|| dmlerr!())?
+            .as_u64()
+            .unwrap()
+            .to_string();
         let len = title.len() - 3;
         ret.insert(
             "title",

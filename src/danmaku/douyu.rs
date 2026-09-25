@@ -1,10 +1,10 @@
 use crate::{dmlerr, utils::gen_ua};
 use bytes::{Buf, BufMut, Bytes};
-use futures::{stream::StreamExt, SinkExt};
+use futures::{SinkExt, stream::StreamExt};
 use reqwest::Url;
 use std::{collections::HashMap, time::Duration};
 use tokio::time::sleep;
-use tokio_tungstenite::tungstenite::{client::IntoClientRequest, Message::Binary};
+use tokio_tungstenite::tungstenite::{Message::Binary, client::IntoClientRequest};
 
 use super::DMLDanmaku;
 
@@ -29,8 +29,12 @@ impl Douyu {
 
     async fn get_ws_info(&self, url: &str) -> anyhow::Result<(String, Vec<Bytes>)> {
         let mut reg_datas = Vec::new();
-        let rid =
-            Url::parse(url)?.path_segments().ok_or_else(|| dmlerr!())?.last().ok_or_else(|| dmlerr!())?.to_string();
+        let rid = Url::parse(url)?
+            .path_segments()
+            .ok_or_else(|| dmlerr!())?
+            .last()
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
         let pl = format!(r#"type@=loginreq/roomid@={}/"#, rid);
         let mut data = bytes::BytesMut::with_capacity(100);
         let len = pl.len() as u32 + 9;
@@ -78,15 +82,27 @@ impl Douyu {
                 }
             };
 
-            let msg_type = match j.pointer("/type").ok_or_else(|| dmlerr!())?.as_str().ok_or_else(|| dmlerr!())? {
+            let msg_type = match j
+                .pointer("/type")
+                .ok_or_else(|| dmlerr!())?
+                .as_str()
+                .ok_or_else(|| dmlerr!())?
+            {
                 "dgb" => "gift",
                 "chatmsg" => "danmaku",
                 "uenter" => "enter",
                 _ => "other",
             };
             if msg_type.eq("danmaku") {
-                let text = j.pointer("/txt").ok_or_else(|| dmlerr!())?.as_str().unwrap();
-                let color = j.pointer("/col").map(|it| it.as_str().unwrap_or("-1")).unwrap_or("-1");
+                let text = j
+                    .pointer("/txt")
+                    .ok_or_else(|| dmlerr!())?
+                    .as_str()
+                    .unwrap();
+                let color = j
+                    .pointer("/col")
+                    .map(|it| it.as_str().unwrap_or("-1"))
+                    .unwrap_or("-1");
                 let nick = j.pointer("/nn").ok_or_else(|| dmlerr!())?.as_str().unwrap();
                 let dml_dm = DMLDanmaku {
                     time: 0,
@@ -101,10 +117,15 @@ impl Douyu {
         }
         Ok(ret)
     }
-    pub async fn run(&self, url: &str, dtx: async_channel::Sender<DMLDanmaku>) -> anyhow::Result<()> {
+    pub async fn run(
+        &self,
+        url: &str,
+        dtx: async_channel::Sender<DMLDanmaku>,
+    ) -> anyhow::Result<()> {
         let (ws, reg_data) = self.get_ws_info(url).await?;
         let mut req = ws.into_client_request().unwrap();
-        req.headers_mut().insert("User-Agent", gen_ua().parse().unwrap());
+        req.headers_mut()
+            .insert("User-Agent", gen_ua().parse().unwrap());
         let (ws_stream, _) = tokio_tungstenite::connect_async(req).await?;
         let (mut ws_write, mut ws_read) = ws_stream.split();
         ws_write.send(Binary(reg_data[0].clone())).await?;

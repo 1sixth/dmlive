@@ -7,7 +7,10 @@ use url::Url;
 const TTV_API1: &'static str = "https://gql.twitch.tv/gql";
 const TTV_API2: &'static str = "https://usher.ttvnw.net/api/channel/hls/{channel}.m3u8";
 
-pub async fn get_live_info(client: &reqwest::Client, rid: &str) -> anyhow::Result<(String, String, String, bool)> {
+pub async fn get_live_info(
+    client: &reqwest::Client,
+    rid: &str,
+) -> anyhow::Result<(String, String, String, bool)> {
     let payload = format!(
         r#"{{ "query": "query StreamInfo($login: String!) {{ user(login: $login) {{ displayName  login profileImageURL(width: 300)  stream {{ id title  previewImageURL(width: 640, height: 360) game {{ name }} viewersCount }} }} }}", "variables": {{ "login": "{rid}" }} }}"#,
     );
@@ -23,13 +26,25 @@ pub async fn get_live_info(client: &reqwest::Client, rid: &str) -> anyhow::Resul
         .await?;
     info!("{resp:?}");
     let mut is_live = false;
-    let owner = resp.pointer("/data/user/displayName").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-    let avatar = resp.pointer("/data/user/profileImageURL").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-    let title = resp.pointer("/data/user/stream/title").and_then(|x| x.as_str()).map_or("没有直播标题", |x| {
-        is_live = true;
-        x
-    });
-    let cover = resp.pointer("/data/user/stream/previewImageURL").and_then(|x| x.as_str()).unwrap_or(avatar);
+    let owner = resp
+        .pointer("/data/user/displayName")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
+    let avatar = resp
+        .pointer("/data/user/profileImageURL")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
+    let title = resp
+        .pointer("/data/user/stream/title")
+        .and_then(|x| x.as_str())
+        .map_or("没有直播标题", |x| {
+            is_live = true;
+            x
+        });
+    let cover = resp
+        .pointer("/data/user/stream/previewImageURL")
+        .and_then(|x| x.as_str())
+        .unwrap_or(avatar);
     Ok((
         owner.to_string(),
         title.to_string(),
@@ -46,7 +61,11 @@ impl Twitch {
     }
 
     pub async fn get_live(&self, room_url: &str) -> anyhow::Result<HashMap<&'static str, String>> {
-        let rid = Url::parse(room_url)?.path_segments().and_then(|x| x.last()).ok_or_else(|| dmlerr!())?.to_string();
+        let rid = Url::parse(room_url)?
+            .path_segments()
+            .and_then(|x| x.last())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
         let client = reqwest::Client::new();
         let mut ret = HashMap::new();
 
@@ -72,8 +91,10 @@ impl Twitch {
             .pointer("/data/streamPlaybackAccessToken/signature")
             .and_then(|x| x.as_str())
             .ok_or_else(|| dmlerr!())?;
-        let token =
-            resp.pointer("/data/streamPlaybackAccessToken/value").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
+        let token = resp
+            .pointer("/data/streamPlaybackAccessToken/value")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?;
         param1.clear();
         param1.push(("allow_source", "true"));
         param1.push(("fast_bread", "true"));

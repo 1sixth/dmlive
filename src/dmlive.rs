@@ -1,6 +1,6 @@
 use crate::{
-    config::ConfigManager, danmaku::Danmaku, ffmpeg::FfmpegControl, ipcmanager::IPCManager, mpv::MpvControl,
-    streamer::Streamer, streamfinder::StreamFinder,
+    config::ConfigManager, danmaku::Danmaku, ffmpeg::FfmpegControl, ipcmanager::IPCManager,
+    mpv::MpvControl, streamer::Streamer, streamfinder::StreamFinder,
 };
 use async_channel::{Receiver, Sender};
 use futures::StreamExt;
@@ -112,9 +112,13 @@ impl DMLive {
                 info!("video info: w {w} h {h} pts {pts}");
                 // danmaku task
                 if matches!(self.ctx.cm.site, crate::config::Site::BiliVideo) {
-                    let _ = self.dm.run_bilivideo(16.0 * h as f64 / w as f64 / 9.0).await;
+                    let _ = self
+                        .dm
+                        .run_bilivideo(16.0 * h as f64 / w as f64 / 9.0)
+                        .await;
                 } else {
-                    self.dm.set_ratio_scale((16.0 / 9.0) / (w as f64 / h as f64));
+                    self.dm
+                        .set_ratio_scale((16.0 / 9.0) / (w as f64 / h as f64));
                     // let _ = self.dm.run(16.0 * h as f64 / w as f64 / 9.0, pts).await;
                 }
             }
@@ -123,7 +127,10 @@ impl DMLive {
                 let _ = self.dm.run().await;
             }
             DMLMessage::PlayVideo => {
-                let _ = self.play_video().await.map_err(|e| info!("play video error: {}", e));
+                let _ = self
+                    .play_video()
+                    .await
+                    .map_err(|e| info!("play video error: {}", e));
             }
             DMLMessage::FfmpegOutputReady => {
                 info!("ffmpeg output ready");
@@ -175,13 +182,19 @@ impl DMLive {
         let mut stream_info = self.sf.run().await?;
         self.ctx.cm.set_stream_type(&stream_info);
         *self.ctx.cm.title.borrow_mut() = stream_info.remove("title").unwrap();
-        self.dm.set_bili_video_cid(stream_info.get("bili_cid").unwrap_or(&"".to_string())).await;
+        self.dm
+            .set_bili_video_cid(stream_info.get("bili_cid").unwrap_or(&"".to_string()))
+            .await;
         let ff_task = async {
             self.fc.run(&stream_info).await?;
             anyhow::Ok(())
         };
         let streamer_task = async {
-            let _ = self.st.run(&stream_info).await.map_err(|e| info!("streamer error: {}", e));
+            let _ = self
+                .st
+                .run(&stream_info)
+                .await
+                .map_err(|e| info!("streamer error: {}", e));
             self.fc.quit().await?;
             anyhow::Ok(())
         };
@@ -197,7 +210,9 @@ impl DMLive {
         let mut stream_info = self.sf.run().await?;
         self.ctx.cm.set_stream_type(&stream_info);
         *self.ctx.cm.title.borrow_mut() = stream_info.remove("title").unwrap();
-        self.dm.set_bili_video_cid(stream_info.get("bili_cid").unwrap_or(&"".to_string())).await;
+        self.dm
+            .set_bili_video_cid(stream_info.get("bili_cid").unwrap_or(&"".to_string()))
+            .await;
         self.mc.reload_edl_video(&stream_info).await?;
         Ok(())
     }
@@ -205,7 +220,9 @@ impl DMLive {
     pub async fn download_danmaku(&self) -> anyhow::Result<()> {
         let mut stream_info = self.sf.run().await?;
         *self.ctx.cm.title.borrow_mut() = stream_info.remove("title").unwrap();
-        self.dm.set_bili_video_cid(stream_info.get("bili_cid").unwrap_or(&"".to_string())).await;
+        self.dm
+            .set_bili_video_cid(stream_info.get("bili_cid").unwrap_or(&"".to_string()))
+            .await;
         let ff_task = async {
             self.fc.write_danmaku_only_task().await?;
             anyhow::Ok(())

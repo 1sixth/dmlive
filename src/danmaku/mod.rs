@@ -107,7 +107,8 @@ impl Danmaku {
     pub async fn set_font_size(&self, font_scale: f64) {
         if font_scale > 0.0 {
             self.font_size.set((40.0 * font_scale) as usize);
-            self.channel_num.set((540.0 / self.font_size.get() as f64).ceil() as usize);
+            self.channel_num
+                .set((540.0 / self.font_size.get() as f64).ceil() as usize);
             self.ctx.cm.font_scale.set(font_scale);
             let _ = self.ctx.cm.write_config().await;
         }
@@ -145,7 +146,9 @@ impl Danmaku {
                 c.begin_pts = c_pts;
                 return Some(i);
             }
-            if ((self.ctx.cm.danmaku_speed.get() as f64 - c_pts as f64 + c.begin_pts as f64) * s) > 1920.0 {
+            if ((self.ctx.cm.danmaku_speed.get() as f64 - c_pts as f64 + c.begin_pts as f64) * s)
+                > 1920.0
+            {
                 continue;
             } else if ((c.length + 1920) as f64 * (c_pts as f64 - c.begin_pts as f64)
                 / self.ctx.cm.danmaku_speed.get() as f64)
@@ -182,12 +185,16 @@ impl Danmaku {
             non_ascii_num += 1;
         }
         let fs = self.font_size.get();
-        (((fs as f64 * 0.75 * non_ascii_num as f64) + (fs as f64 * 0.50 * ascii_num as f64)) * self.ratio_scale.get())
-            .round() as usize
+        (((fs as f64 * 0.75 * non_ascii_num as f64) + (fs as f64 * 0.50 * ascii_num as f64))
+            * self.ratio_scale.get())
+        .round() as usize
     }
 
     fn launch_single_danmaku(
-        &self, d: &DMLDanmaku, cluster: &RefCell<mkv_header::DMKVCluster>, track_number: u8,
+        &self,
+        d: &DMLDanmaku,
+        cluster: &RefCell<mkv_header::DMKVCluster>,
+        track_number: u8,
     ) -> Result<()> {
         let mut out_of_channel = false;
         let mut f1 = || {
@@ -221,7 +228,8 @@ impl Danmaku {
                     // (ass, 1000)
                 }
                 None => {
-                    let ass = format!(r"{},0,Default,dmlive-empty,0,0,0,,", self.read_order.get()).into_bytes();
+                    let ass = format!(r"{},0,Default,dmlive-empty,0,0,0,,", self.read_order.get())
+                        .into_bytes();
                     (ass, if track_number == 1 { 0 } else { 200 })
                 }
             }
@@ -242,12 +250,17 @@ impl Danmaku {
             (ass, self.ctx.cm.danmaku_speed.get())
         };
         self.read_order.update(|x| x + 1);
-        let _ = cluster.borrow_mut().add_ass_block(d.time as u64, ass, du, track_number);
+        let _ = cluster
+            .borrow_mut()
+            .add_ass_block(d.time as u64, ass, du, track_number);
         // out_of_channel.not().then(|| {}).ok_or_else(|| anyhow!("channels unavailable"))
         Ok(())
     }
 
-    async fn launch_live_danmaku_task(&self, rx: async_channel::Receiver<DMLDanmaku>) -> Result<()> {
+    async fn launch_live_danmaku_task(
+        &self,
+        rx: async_channel::Receiver<DMLDanmaku>,
+    ) -> Result<()> {
         let now = std::time::Instant::now();
         let padding_time = Cell::new(0);
         let mut socket = self.ctx.im.get_danmaku_socket().await?;
@@ -303,7 +316,10 @@ impl Danmaku {
         Ok(())
     }
 
-    async fn launch_video_danmaku_task(&self, rx: async_channel::Receiver<DMLDanmaku>) -> Result<()> {
+    async fn launch_video_danmaku_task(
+        &self,
+        rx: async_channel::Receiver<DMLDanmaku>,
+    ) -> Result<()> {
         let mut socket = self.ctx.im.get_danmaku_socket().await?;
         let mut dm_map: BTreeMap<i64, DMLDanmaku> = BTreeMap::new();
         while let Ok(d) = rx.recv().await {
@@ -378,7 +394,8 @@ impl Danmaku {
                 }
                 crate::config::Site::BahaVideo => {
                     let b = baha::Baha::new();
-                    b.run(self.bili_video_cid.borrow().to_string(), dtx.clone()).await
+                    b.run(self.bili_video_cid.borrow().to_string(), dtx.clone())
+                        .await
                 }
                 crate::config::Site::DouyuLive => {
                     let b = douyu::Douyu::new();

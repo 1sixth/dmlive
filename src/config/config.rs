@@ -16,7 +16,7 @@ pub fn load_config(j: &str) -> Result<Config, std::io::Error> {
 
 pub enum BVideoType {
     Video,
-    Bangumi
+    Bangumi,
 }
 
 pub struct BVideoInfo {

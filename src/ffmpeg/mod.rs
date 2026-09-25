@@ -129,17 +129,23 @@ impl FfmpegControl {
                     ret.arg("-i").arg(self.ctx.im.get_audio_socket_path());
                 }
                 ret.arg("-i").arg(self.ctx.im.get_danmaku_socket_path());
-                ret.args(["-map", "0:v:0?", "-map", "1:a:0?", "-map", "2:s:0", "-map", "2:s:1?"]);
+                ret.args([
+                    "-map", "0:v:0?", "-map", "1:a:0?", "-map", "2:s:0", "-map", "2:s:1?",
+                ]);
             }
             crate::config::StreamType::HLS(0) => {
                 ret.arg("-i").arg("-");
                 ret.arg("-i").arg(self.ctx.im.get_danmaku_socket_path());
-                ret.args(["-map", "0:v:0?", "-map", "0:a:0?", "-map", "1:s:0", "-map", "1:s:1?"]);
+                ret.args([
+                    "-map", "0:v:0?", "-map", "0:a:0?", "-map", "1:s:0", "-map", "1:s:1?",
+                ]);
             }
             _ => {
                 ret.arg("-i").arg(self.ctx.im.get_video_socket_path());
                 ret.arg("-i").arg(self.ctx.im.get_danmaku_socket_path());
-                ret.args(["-map", "0:v:0?", "-map", "0:a:0?", "-map", "1:s:0", "-map", "1:s:1?"]);
+                ret.args([
+                    "-map", "0:v:0?", "-map", "0:a:0?", "-map", "1:s:0", "-map", "1:s:1?",
+                ]);
             }
         }
         ret.args(&["-c:v", "copy"]);
@@ -155,7 +161,9 @@ impl FfmpegControl {
         ]);
         match self.ctx.cm.run_mode {
             RunMode::Play => {
-                ret.arg("-listen").arg("1").arg(self.ctx.im.get_f2m_socket_path());
+                ret.arg("-listen")
+                    .arg("1")
+                    .arg(self.ctx.im.get_f2m_socket_path());
             }
             RunMode::Record => {
                 match self.ctx.cm.http_address.as_ref() {
@@ -163,7 +171,9 @@ impl FfmpegControl {
                         ret.arg("-listen").arg("1").arg(it);
                     }
                     None => {
-                        ret.arg("-listen").arg("1").arg(self.ctx.im.get_f2m_socket_path());
+                        ret.arg("-listen")
+                            .arg("1")
+                            .arg(self.ctx.im.get_f2m_socket_path());
                     }
                 };
             }
@@ -185,7 +195,8 @@ impl FfmpegControl {
 
     pub async fn get_video_info<T: AsyncRead + Unpin>(&self, ffstderr: T) -> Result<()> {
         let mut reader = BufReader::new(ffstderr).lines();
-        let res_re = regex::Regex::new(r"Stream #[0-9].+? Video:.*?\D(\d{3,5})x(\d{2,5})\D.*").unwrap();
+        let res_re =
+            regex::Regex::new(r"Stream #[0-9].+? Video:.*?\D(\d{3,5})x(\d{2,5})\D.*").unwrap();
         let pts_re = regex::Regex::new(r"Duration: ([^,\s]+),\s+(start: ([0-9.]+))*.+").unwrap();
         let dm_re = regex::Regex::new(r"Stream #[0-9:]+\s*Subtitle:\s*ass").unwrap();
         let mut vinfo_sent = false;
@@ -194,7 +205,11 @@ impl FfmpegControl {
         // while let Some(line) = reader.next_line().await.unwrap_or(Some("".to_string())) {
         while let Some(line) = reader.next_line().await.unwrap_or_else(|_| {
             retry += 1;
-            if retry < 5 { Some("".to_string()) } else { None }
+            if retry < 5 {
+                Some("".to_string())
+            } else {
+                None
+            }
         }) {
             info!("{}", &line);
             let line = line.trim();

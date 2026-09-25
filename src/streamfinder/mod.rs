@@ -78,7 +78,8 @@ impl StreamFinder {
                 break;
             } else {
                 warn!("waiting for {} seconds...", self.ctx.cm.wait_interval);
-                tokio::time::sleep(tokio::time::Duration::from_secs(self.ctx.cm.wait_interval)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(self.ctx.cm.wait_interval))
+                    .await;
             }
         }
         Err(anyhow!("max retry, quit"))

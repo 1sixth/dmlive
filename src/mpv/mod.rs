@@ -80,7 +80,9 @@ impl MpvControl {
 
     pub async fn reload_video(&self) -> Result<()> {
         if self.ctx.cm.plat == Platform::Android {
-            Command::new("termux-open").arg(self.ctx.im.get_f2m_socket_path()).spawn()?;
+            Command::new("termux-open")
+                .arg(self.ctx.im.get_f2m_socket_path())
+                .spawn()?;
         } else {
             self.mpv_command_tx
                 .send(format!(
@@ -98,7 +100,9 @@ impl MpvControl {
     // }
 
     pub async fn stop(&self) -> Result<()> {
-        self.mpv_command_tx.send("{ \"command\": [\"stop\"] }\n".into()).await?;
+        self.mpv_command_tx
+            .send("{ \"command\": [\"stop\"] }\n".into())
+            .await?;
         Ok(())
     }
 
@@ -124,8 +128,16 @@ impl MpvControl {
         let j: serde_json::Value = serde_json::from_str(&line)?;
         if let Some(rid) = j.pointer("/request_id") {
             if rid.as_u64().eq(&Some(114)) {
-                let w = j.pointer("/data/w").ok_or_else(|| dmlerr!())?.as_u64().unwrap();
-                let h = j.pointer("/data/h").ok_or_else(|| dmlerr!())?.as_u64().unwrap();
+                let w = j
+                    .pointer("/data/w")
+                    .ok_or_else(|| dmlerr!())?
+                    .as_u64()
+                    .unwrap();
+                let h = j
+                    .pointer("/data/h")
+                    .ok_or_else(|| dmlerr!())?
+                    .as_u64()
+                    .unwrap();
                 if matches!(self.ctx.cm.site, crate::config::Site::BiliVideo) {
                     let _ = self.ctx.mtx.send(DMLMessage::SetVideoInfo((w, h, 0))).await;
                     self.mpv_command_tx
@@ -146,7 +158,10 @@ impl MpvControl {
                 match j.pointer("/data") {
                     Some(it) => match it.as_f64() {
                         Some(it) => {
-                            self.ctx.cm.display_fps.set((it.round() as u64, self.ctx.cm.display_fps.get().1));
+                            self.ctx
+                                .cm
+                                .display_fps
+                                .set((it.round() as u64, self.ctx.cm.display_fps.get().1));
                         }
                         None => {}
                     },
@@ -172,10 +187,19 @@ impl MpvControl {
                 }
             }
         }
-        let event = j.pointer("/event").ok_or_else(|| dmlerr!())?.as_str().ok_or_else(|| dmlerr!())?;
+        let event = j
+            .pointer("/event")
+            .ok_or_else(|| dmlerr!())?
+            .as_str()
+            .ok_or_else(|| dmlerr!())?;
         if event.eq("end-file") {
             if matches!(self.ctx.cm.site, crate::config::Site::BiliVideo) {
-                if j.pointer("/reason").ok_or_else(|| dmlerr!())?.as_str().unwrap().eq("eof") {
+                if j.pointer("/reason")
+                    .ok_or_else(|| dmlerr!())?
+                    .as_str()
+                    .unwrap()
+                    .eq("eof")
+                {
                     self.ctx.cm.bvideo_info.borrow_mut().current_page += 1;
                     let _ = self.ctx.mtx.send(DMLMessage::PlayVideo).await;
                 }
@@ -202,7 +226,10 @@ impl MpvControl {
             }
             self.last_rpc_ts.set(now);
             let cmds = cmdparser::CmdParser::new(
-                j.pointer("/args/0").ok_or_else(|| dmlerr!())?.as_str().ok_or_else(|| dmlerr!())?,
+                j.pointer("/args/0")
+                    .ok_or_else(|| dmlerr!())?
+                    .as_str()
+                    .ok_or_else(|| dmlerr!())?,
             );
             if cmds.restart {
                 if matches!(self.ctx.cm.site, crate::config::Site::BiliVideo) {
@@ -212,17 +239,41 @@ impl MpvControl {
                 }
             }
             if cmds.fs.is_some() {
-                let _ = self.ctx.mtx.send(DMLMessage::SetFontScale(cmds.fs.unwrap())).await;
+                let _ = self
+                    .ctx
+                    .mtx
+                    .send(DMLMessage::SetFontScale(cmds.fs.unwrap()))
+                    .await;
             } else if cmds.fsup {
-                let _ = self.ctx.mtx.send(DMLMessage::SetFontScale(self.ctx.cm.font_scale.get() + 0.15)).await;
+                let _ = self
+                    .ctx
+                    .mtx
+                    .send(DMLMessage::SetFontScale(
+                        self.ctx.cm.font_scale.get() + 0.15,
+                    ))
+                    .await;
             } else if cmds.fsdown {
-                let _ = self.ctx.mtx.send(DMLMessage::SetFontScale(self.ctx.cm.font_scale.get() - 0.15)).await;
+                let _ = self
+                    .ctx
+                    .mtx
+                    .send(DMLMessage::SetFontScale(
+                        self.ctx.cm.font_scale.get() - 0.15,
+                    ))
+                    .await;
             }
             if cmds.fa.is_some() {
-                let _ = self.ctx.mtx.send(DMLMessage::SetFontAlpha(cmds.fa.unwrap())).await;
+                let _ = self
+                    .ctx
+                    .mtx
+                    .send(DMLMessage::SetFontAlpha(cmds.fa.unwrap()))
+                    .await;
             }
             if cmds.speed.is_some() {
-                let _ = self.ctx.mtx.send(DMLMessage::SetDMSpeed(cmds.speed.unwrap())).await;
+                let _ = self
+                    .ctx
+                    .mtx
+                    .send(DMLMessage::SetDMSpeed(cmds.speed.unwrap()))
+                    .await;
             }
             if cmds.page.is_some() {
                 self.ctx.cm.bvideo_info.borrow_mut().current_page = cmds.page.unwrap() as usize;
@@ -232,7 +283,13 @@ impl MpvControl {
                 let _ = self.ctx.mtx.send(DMLMessage::ToggleShowNick).await;
             }
             if cmds.back {
-                let p = self.ctx.cm.bvideo_info.borrow().current_page.saturating_sub(1);
+                let p = self
+                    .ctx
+                    .cm
+                    .bvideo_info
+                    .borrow()
+                    .current_page
+                    .saturating_sub(1);
                 self.ctx.cm.bvideo_info.borrow_mut().current_page = if p == 0 { 1 } else { p };
                 let _ = self.ctx.mtx.send(DMLMessage::PlayVideo).await;
             }
@@ -271,7 +328,12 @@ impl MpvControl {
     }
 
     pub async fn run_normal(&self) -> Result<()> {
-        let mut mpv = self.create_mpv_command().await?.kill_on_drop(true).spawn().unwrap();
+        let mut mpv = self
+            .create_mpv_command()
+            .await?
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
         let s = UnixStream::connect(self.ctx.im.get_mpv_socket_path()).await?;
         let (usocket_read, mut usocket_write) = tokio::io::split(s);

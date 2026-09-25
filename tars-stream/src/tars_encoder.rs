@@ -1,11 +1,11 @@
-use bytes::{BufMut, Bytes, BytesMut};
 use crate::errors::EncodeErr;
-use std::collections::BTreeMap;
-use std::convert::TryFrom;
-use std::mem;
 use crate::tars_trait::{EnumToI32, StructToTars};
 use crate::tars_type::TarsTypeMark::*;
 use crate::tars_type::*;
+use bytes::{BufMut, Bytes, BytesMut};
+use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::mem;
 
 const MAX_HEADER_LEN: usize = 2;
 const MAX_SIZE_LEN: usize = 4;
@@ -17,7 +17,9 @@ pub struct TarsEncoder {
 
 impl TarsEncoder {
     pub fn new() -> Self {
-        TarsEncoder { buf: BytesMut::new() }
+        TarsEncoder {
+            buf: BytesMut::new(),
+        }
     }
 
     pub fn individual_encode<T>(ele: &T) -> Result<Bytes, EncodeErr>

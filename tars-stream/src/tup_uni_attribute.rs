@@ -1,5 +1,5 @@
-use bytes::Bytes;
 use crate::errors::{DecodeErr, EncodeErr};
+use bytes::Bytes;
 use std::collections::BTreeMap;
 
 use crate::tars_decoder::{DecodeTars, TarsDecoder};
@@ -246,7 +246,8 @@ mod tests {
         let uni = TupUniAttribute::from_bytes(
             &TarsEncoder::individual_encode(&map).unwrap(),
             ProtocolVersion::TupSimple,
-        ).unwrap();
+        )
+        .unwrap();
 
         let de_0 = uni.read(&key0, true, 0).unwrap();
         assert_eq!(de_0, value0);
@@ -445,7 +446,8 @@ mod tests {
         let uni = TupUniAttribute::from_bytes(
             &TarsEncoder::individual_encode(&map).unwrap(),
             ProtocolVersion::TupComplex,
-        ).unwrap();
+        )
+        .unwrap();
 
         let de_0: i64 = uni.read(&key0, true, 0).unwrap();
         assert_eq!(de_0, value0);

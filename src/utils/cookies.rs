@@ -1,6 +1,6 @@
 use std::{fs::DirEntry, time::SystemTime};
 
-use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
+use aes::cipher::{BlockDecryptMut, KeyIvInit, block_padding::Pkcs7};
 use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
 use tokio::process::Command;
@@ -35,7 +35,9 @@ async fn get_kwallet_password(browser: &str) -> anyhow::Result<[u8; 16]> {
         ])
         .output()
         .await?;
-    let wallet_name = String::from_utf8_lossy(&dbus_send_cmd.stdout).trim().to_string();
+    let wallet_name = String::from_utf8_lossy(&dbus_send_cmd.stdout)
+        .trim()
+        .to_string();
     info!("found wallet name: {}", &wallet_name);
     let kwallet_cmd = Command::new("kwallet-query")
         .args(&[
@@ -47,7 +49,9 @@ async fn get_kwallet_password(browser: &str) -> anyhow::Result<[u8; 16]> {
         ])
         .output()
         .await?;
-    let mut password = String::from_utf8_lossy(&kwallet_cmd.stdout).trim().to_string();
+    let mut password = String::from_utf8_lossy(&kwallet_cmd.stdout)
+        .trim()
+        .to_string();
     if password.starts_with("Failed") {
         password.clear();
     }
@@ -138,7 +142,8 @@ WHERE host_key LIKE '{}'
 }
 
 async fn get_firefox_cookies(host: &str) -> anyhow::Result<String> {
-    let user_dirs = directories::UserDirs::new().ok_or_else(|| anyhow::anyhow!("User dir not found"))?;
+    let user_dirs =
+        directories::UserDirs::new().ok_or_else(|| anyhow::anyhow!("User dir not found"))?;
     let ff_dir = user_dirs.home_dir().join(".mozilla").join("firefox");
     let dir = std::fs::read_dir(ff_dir)?
         .max_by_key(|x| {

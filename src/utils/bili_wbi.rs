@@ -6,9 +6,9 @@ use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MIXIN_KEY_ENC_TAB: [usize; 64] = [
-    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38,
-    41, 13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36,
-    20, 34, 44, 52,
+    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19, 29,
+    28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25,
+    54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52,
 ];
 
 #[derive(Deserialize)]
@@ -29,7 +29,11 @@ struct ResWbi {
 
 // 对 imgKey 和 subKey 进行字符顺序打乱编码
 fn get_mixin_key(orig: &[u8]) -> String {
-    MIXIN_KEY_ENC_TAB.iter().take(32).map(|&i| orig[i] as char).collect::<String>()
+    MIXIN_KEY_ENC_TAB
+        .iter()
+        .take(32)
+        .map(|&i| orig[i] as char)
+        .collect::<String>()
 }
 
 fn get_url_encoded(s: &str) -> String {
@@ -41,8 +45,10 @@ fn get_url_encoded(s: &str) -> String {
                 if "!'()*".contains(c) {
                     return None;
                 }
-                let encoded =
-                    c.encode_utf8(&mut [0; 4]).bytes().fold("".to_string(), |acc, b| acc + &format!("%{:02X}", b));
+                let encoded = c
+                    .encode_utf8(&mut [0; 4])
+                    .bytes()
+                    .fold("".to_string(), |acc, b| acc + &format!("%{:02X}", b));
                 Some(encoded)
             }
         })
@@ -83,7 +89,11 @@ pub fn encode_wbi(params: Vec<(&str, String)>, (img_key, sub_key): (String, Stri
     _encode_wbi(params, (img_key, sub_key), cur_time)
 }
 
-fn _encode_wbi(mut params: Vec<(&str, String)>, (img_key, sub_key): (String, String), timestamp: u64) -> String {
+fn _encode_wbi(
+    mut params: Vec<(&str, String)>,
+    (img_key, sub_key): (String, String),
+    timestamp: u64,
+) -> String {
     let mixin_key = get_mixin_key((img_key + &sub_key).as_bytes());
     // 添加当前时间戳
     params.push(("wts", timestamp.to_string()));
@@ -103,7 +113,9 @@ fn _encode_wbi(mut params: Vec<(&str, String)>, (img_key, sub_key): (String, Str
 
 pub async fn get_wbi_keys(cookies: &str) -> Result<(String, String), reqwest::Error> {
     let client = reqwest::Client::new();
-    let ResWbi { data: Data { wbi_img } } = client
+    let ResWbi {
+        data: Data { wbi_img },
+    } = client
         .get("https://api.bilibili.com/x/web-interface/nav")
         .header(USER_AGENT, crate::utils::gen_ua_safari())
         .header("Referer", "https://www.bilibili.com/")
@@ -119,5 +131,7 @@ pub async fn get_wbi_keys(cookies: &str) -> Result<(String, String), reqwest::Er
 }
 
 fn take_filename(url: String) -> Option<String> {
-    url.rsplit_once('/').and_then(|(_, s)| s.rsplit_once('.')).map(|(s, _)| s.to_string())
+    url.rsplit_once('/')
+        .and_then(|(_, s)| s.rsplit_once('.'))
+        .map(|(s, _)| s.to_string())
 }

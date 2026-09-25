@@ -257,8 +257,7 @@ impl TestStruct2 {
 
         let m_len: u8 = random();
         for _ in 0..m_len {
-            ts.m
-                .insert(Uuid::new_v4().to_string(), Uuid::new_v4().to_string());
+            ts.m.insert(Uuid::new_v4().to_string(), Uuid::new_v4().to_string());
         }
 
         ts.y = random();

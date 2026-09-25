@@ -11,7 +11,11 @@ impl Bilibili {
         Bilibili {}
     }
 
-    pub async fn run(&self, url: &str, dtx: async_channel::Sender<DMLDanmaku>) -> anyhow::Result<()> {
+    pub async fn run(
+        &self,
+        url: &str,
+        dtx: async_channel::Sender<DMLDanmaku>,
+    ) -> anyhow::Result<()> {
         let client = reqwest::Client::builder()
             .deflate(false)
             .user_agent(crate::utils::gen_ua())
@@ -29,7 +33,10 @@ impl Bilibili {
         let dp = dp.into_inner();
         let buf = String::from_utf8_lossy(&dp);
         let doc = roxmltree::Document::parse(&buf)?;
-        let elem_dm: Vec<roxmltree::Node> = doc.descendants().filter(|n| n.tag_name().name() == "d").collect();
+        let elem_dm: Vec<roxmltree::Node> = doc
+            .descendants()
+            .filter(|n| n.tag_name().name() == "d")
+            .collect();
         for e in elem_dm {
             if e.has_attribute("p") {
                 let tmps: Vec<&str> = e.attribute("p").unwrap().split(',').collect();

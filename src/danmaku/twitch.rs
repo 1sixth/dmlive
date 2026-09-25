@@ -18,11 +18,16 @@ impl Twitch {
     }
 
     async fn get_ws_info(&self, url: &str) -> anyhow::Result<(String, Vec<String>)> {
-        let rid =
-            Url::parse(url)?.path_segments().ok_or_else(|| dmlerr!())?.last().ok_or_else(|| dmlerr!())?.to_string();
+        let rid = Url::parse(url)?
+            .path_segments()
+            .ok_or_else(|| dmlerr!())?
+            .last()
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
         let mut reg_datas: Vec<String> = Vec::new();
 
-        reg_datas.push("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership".to_owned());
+        reg_datas
+            .push("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership".to_owned());
         reg_datas.push("PASS SCHMOOPIIE".to_owned());
         let rn = rand::random::<u64>();
         let nick = format!("justinfan{}", 10000 + (rn % 80000));
@@ -64,7 +69,11 @@ impl Twitch {
         Ok(ret)
     }
 
-    pub async fn run(&self, url: &str, dtx: async_channel::Sender<DMLDanmaku>) -> anyhow::Result<()> {
+    pub async fn run(
+        &self,
+        url: &str,
+        dtx: async_channel::Sender<DMLDanmaku>,
+    ) -> anyhow::Result<()> {
         let (ws, mut reg_datas) = self.get_ws_info(url).await?;
         let (ws_stream, _) = connect_async(&ws).await?;
         let (mut ws_write, mut ws_read) = ws_stream.split();

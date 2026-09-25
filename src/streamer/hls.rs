@@ -66,7 +66,12 @@ impl HLS {
                         td = v.parse().unwrap_or(5);
                     } else if k.eq("EXT-X-MAP") {
                         let (_, h) = v.split_once("=").unwrap_or(("", ""));
-                        let h = h.trim().strip_prefix('"').and_then(|it| it.strip_suffix('"')).unwrap_or("").trim();
+                        let h = h
+                            .trim()
+                            .strip_prefix('"')
+                            .and_then(|it| it.strip_suffix('"'))
+                            .unwrap_or("")
+                            .trim();
                         header.clear();
                         header.push_str(h);
                     } else if k.eq("EXTINF") {
@@ -98,7 +103,9 @@ impl HLS {
                             .split(',')
                             .find_map(|a| {
                                 if a.trim().starts_with("BANDWIDTH") {
-                                    return a.split("=").find_map(|x| x.trim().parse::<isize>().ok());
+                                    return a
+                                        .split("=")
+                                        .find_map(|x| x.trim().parse::<isize>().ok());
                                 }
                                 None
                             })
@@ -157,7 +164,11 @@ impl HLS {
                 continue;
             }
             let url = self.parse_clip_url(&clip.url)?;
-            let mut resp = client.get(url).header("Connection", "keep-alive").send().await?;
+            let mut resp = client
+                .get(url)
+                .header("Connection", "keep-alive")
+                .send()
+                .await?;
             while let Some(chunk) = resp.chunk().await? {
                 if clip.skip == 0 {
                     if !self.stream_ready.get() {
@@ -201,7 +212,8 @@ impl HLS {
                 let s = self.parse_clip_url(s)?;
                 *self.url.borrow_mut() = s;
             }
-            ss.update_sequence(m3u8.sequence, m3u8.clips, m3u8.target_duration * 1000).await?;
+            ss.update_sequence(m3u8.sequence, m3u8.clips, m3u8.target_duration * 1000)
+                .await?;
         }
         Ok(())
     }

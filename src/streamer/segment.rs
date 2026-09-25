@@ -38,7 +38,12 @@ impl SegmentStream {
         }
     }
 
-    pub async fn update_sequence(&self, sq: u64, clips: VecDeque<MediaSegment>, itvl: u64) -> anyhow::Result<()> {
+    pub async fn update_sequence(
+        &self,
+        sq: u64,
+        clips: VecDeque<MediaSegment>,
+        itvl: u64,
+    ) -> anyhow::Result<()> {
         self.refresh_itvl.set(itvl);
         let mut old_clips = self.clips.borrow_mut();
         // info!("{:?}\n{:?}", &clips, &old_clips);
@@ -83,7 +88,8 @@ impl SegmentStream {
         let mut last_sq = 0u64;
         let mut state = 0;
         loop {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(self.refresh_itvl.get()));
+            let mut interval =
+                tokio::time::interval(tokio::time::Duration::from_millis(self.refresh_itvl.get()));
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             interval.tick().await;
             loop {

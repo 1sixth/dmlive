@@ -17,8 +17,18 @@ use tokio::sync::mpsc::{self, Receiver};
 use tokio::{io::AsyncWriteExt, sync::mpsc::Sender};
 
 fn get_head_sq_and_time(resp: &Response) -> anyhow::Result<(u64, u64)> {
-    let sq: u64 = resp.headers().get("X-Head-Seqnum").ok_or_else(|| dmlerr!())?.to_str()?.parse()?;
-    let ti: u64 = resp.headers().get("X-Head-Time-Sec").ok_or_else(|| dmlerr!())?.to_str()?.parse()?;
+    let sq: u64 = resp
+        .headers()
+        .get("X-Head-Seqnum")
+        .ok_or_else(|| dmlerr!())?
+        .to_str()?
+        .parse()?;
+    let ti: u64 = resp
+        .headers()
+        .get("X-Head-Time-Sec")
+        .ok_or_else(|| dmlerr!())?
+        .to_str()?
+        .parse()?;
     Ok((sq, ti))
 }
 
@@ -73,7 +83,10 @@ impl Youtube {
     }
 
     pub async fn download_audio(
-        &self, client: &Client, stream: &mut Box<dyn DMLStream>, seg: &MediaSegment,
+        &self,
+        client: &Client,
+        stream: &mut Box<dyn DMLStream>,
+        seg: &MediaSegment,
     ) -> anyhow::Result<()> {
         if seg.skip != 0 {
             return Ok(());
@@ -97,7 +110,10 @@ impl Youtube {
     }
 
     pub async fn download_video(
-        &self, client: &Client, stream: &mut Box<dyn DMLStream>, seg: &MediaSegment,
+        &self,
+        client: &Client,
+        stream: &mut Box<dyn DMLStream>,
+        seg: &MediaSegment,
     ) -> anyhow::Result<()> {
         if seg.skip == 2 {
             return Ok(());
@@ -179,24 +195,37 @@ impl Youtube {
         Ok(())
     }
 
-    pub async fn video_task(&self, client: &Client, mut rx: Receiver<MediaSegment>) -> anyhow::Result<()> {
+    pub async fn video_task(
+        &self,
+        client: &Client,
+        mut rx: Receiver<MediaSegment>,
+    ) -> anyhow::Result<()> {
         let mut video_stream = self.ctx.im.get_video_socket().await?;
         while let Some(clip) = rx.recv().await {
-            self.download_video(&client, &mut video_stream, &clip).await?;
+            self.download_video(&client, &mut video_stream, &clip)
+                .await?;
         }
         Ok(())
     }
 
-    pub async fn audio_task(&self, client: &Client, mut rx: Receiver<MediaSegment>) -> anyhow::Result<()> {
+    pub async fn audio_task(
+        &self,
+        client: &Client,
+        mut rx: Receiver<MediaSegment>,
+    ) -> anyhow::Result<()> {
         let mut audio_stream = self.ctx.im.get_audio_socket().await?;
         while let Some(clip) = rx.recv().await {
-            self.download_audio(&client, &mut audio_stream, &clip).await?;
+            self.download_audio(&client, &mut audio_stream, &clip)
+                .await?;
         }
         Ok(())
     }
 
     pub async fn dispatch_task(
-        &self, ss: &SegmentStream, tx_v: Sender<MediaSegment>, tx_a: Sender<MediaSegment>,
+        &self,
+        ss: &SegmentStream,
+        tx_v: Sender<MediaSegment>,
+        tx_a: Sender<MediaSegment>,
     ) -> anyhow::Result<()> {
         let mut rx = ss.clip_rx.borrow_mut();
         while let Some(clip) = rx.recv().await {

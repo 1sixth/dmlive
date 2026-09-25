@@ -7,14 +7,19 @@ use regex::Regex;
 use std::{collections::HashMap, rc::Rc};
 use url::Url;
 
-const BILI_API1: &'static str = "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo";
-const BILI_API2: &'static str = "https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo";
+const BILI_API1: &'static str =
+    "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo";
+const BILI_API2: &'static str =
+    "https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo";
 const BILI_API3: &'static str = "https://api.live.bilibili.com/room/v1/Room/playUrl";
 const BILI_APIV: &'static str = "https://api.bilibili.com/x/player/wbi/playurl";
 // const BILI_APIV_EP: &'static str = "https://api.bilibili.com/pgc/player/web/playurl";
 const BILI_APIV_EP_LIST: &'static str = "https://api.bilibili.com/pgc/view/web/ep/list";
 
-pub async fn get_live_info(client: &reqwest::Client, rid: &str) -> anyhow::Result<(String, String, String, bool)> {
+pub async fn get_live_info(
+    client: &reqwest::Client,
+    rid: &str,
+) -> anyhow::Result<(String, String, String, bool)> {
     let mut param1 = Vec::new();
     param1.push(("room_ids", rid));
     param1.push(("req_biz", "web_room_componet"));
@@ -26,13 +31,28 @@ pub async fn get_live_info(client: &reqwest::Client, rid: &str) -> anyhow::Resul
         .await?
         .json::<serde_json::Value>()
         .await?;
-    let j = resp.pointer("/data/by_room_ids").and_then(|x| x.as_object()).ok_or_else(|| dmlerr!())?;
+    let j = resp
+        .pointer("/data/by_room_ids")
+        .and_then(|x| x.as_object())
+        .ok_or_else(|| dmlerr!())?;
     let j = j.iter().next().ok_or_else(|| dmlerr!())?.1;
-    let title = j.pointer("/title").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-    let uname = j.pointer("/uname").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-    let bg = j.pointer("/background").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
+    let title = j
+        .pointer("/title")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
+    let uname = j
+        .pointer("/uname")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
+    let bg = j
+        .pointer("/background")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| dmlerr!())?;
     let cover = j.pointer("/cover").and_then(|x| x.as_str()).unwrap_or(bg);
-    let is_living = j.pointer("/live_status").and_then(|x| x.as_i64()).ok_or_else(|| dmlerr!())?;
+    let is_living = j
+        .pointer("/live_status")
+        .and_then(|x| x.as_i64())
+        .ok_or_else(|| dmlerr!())?;
     Ok((
         uname.to_string(),
         title.to_string(),
@@ -51,7 +71,11 @@ impl Bilibili {
     }
 
     pub async fn get_live(&self, room_url: &str) -> Result<HashMap<&'static str, String>> {
-        let rid = Url::parse(room_url)?.path_segments().and_then(|x| x.last()).ok_or_else(|| dmlerr!())?.to_string();
+        let rid = Url::parse(room_url)?
+            .path_segments()
+            .and_then(|x| x.last())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
         let client = reqwest::Client::builder()
             .user_agent(crate::utils::gen_ua())
             .connect_timeout(tokio::time::Duration::from_secs(10))
@@ -89,7 +113,11 @@ impl Bilibili {
     #[allow(unused)]
     pub async fn get_live_new(&self, room_url: &str) -> Result<String> {
         // pub async fn get_live_new(&self, room_url: &str) -> Result<HashMap<&'static str, String>> {
-        let rid = Url::parse(room_url)?.path_segments().and_then(|x| x.last()).ok_or_else(|| dmlerr!())?.to_string();
+        let rid = Url::parse(room_url)?
+            .path_segments()
+            .and_then(|x| x.last())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
         let client = reqwest::Client::builder()
             .user_agent(crate::utils::gen_ua())
             .connect_timeout(tokio::time::Duration::from_secs(10))
@@ -124,35 +152,63 @@ impl Bilibili {
             .json::<serde_json::Value>()
             .await?;
         info!("{}", &resp.to_string());
-        let j = resp.pointer("/data/playurl_info/playurl/stream/0/format/0/codec/0").ok_or_else(|| dmlerr!())?;
+        let j = resp
+            .pointer("/data/playurl_info/playurl/stream/0/format/0/codec/0")
+            .ok_or_else(|| dmlerr!())?;
         return Ok(format!(
             "{}{}{}",
-            j.pointer("/url_info/0/host").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?,
-            j.pointer("/base_url").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?,
-            j.pointer("/url_info/0/extra").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?
+            j.pointer("/url_info/0/host")
+                .and_then(|x| x.as_str())
+                .ok_or_else(|| dmlerr!())?,
+            j.pointer("/base_url")
+                .and_then(|x| x.as_str())
+                .ok_or_else(|| dmlerr!())?,
+            j.pointer("/url_info/0/extra")
+                .and_then(|x| x.as_str())
+                .ok_or_else(|| dmlerr!())?
         ));
     }
 
-    pub async fn get_page_info_ep(&self, video_url: &str, mut page: usize) -> Result<(String, String, String, String)> {
+    pub async fn get_page_info_ep(
+        &self,
+        video_url: &str,
+        mut page: usize,
+    ) -> Result<(String, String, String, String)> {
         let client = reqwest::Client::builder()
             .user_agent(crate::utils::gen_ua_safari())
             .connect_timeout(tokio::time::Duration::from_secs(10))
             .build()?;
-        let epid =
-            url::Url::parse(video_url)?.path_segments().and_then(|x| x.last()).ok_or_else(|| dmlerr!())?.to_string();
+        let epid = url::Url::parse(video_url)?
+            .path_segments()
+            .and_then(|x| x.last())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
         let mut param1 = Vec::new();
         if epid.starts_with("ep") {
             param1.push(("ep_id", epid.replace("ep", "")));
         } else {
             param1.push(("season_id", epid.replace("ss", "")));
         }
-        let resp = client.get(BILI_APIV_EP_LIST).query(&param1).send().await?.json::<serde_json::Value>().await?;
-        let eplist = resp.pointer("/result/episodes").and_then(|x| x.as_array()).ok_or_else(|| dmlerr!())?;
+        let resp = client
+            .get(BILI_APIV_EP_LIST)
+            .query(&param1)
+            .send()
+            .await?
+            .json::<serde_json::Value>()
+            .await?;
+        let eplist = resp
+            .pointer("/result/episodes")
+            .and_then(|x| x.as_array())
+            .ok_or_else(|| dmlerr!())?;
         if page == 0 {
             page = 1;
             if epid.starts_with("ep") {
                 for (i, e) in eplist.iter().enumerate() {
-                    if e.pointer("/link").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?.contains(&epid) {
+                    if e.pointer("/link")
+                        .and_then(|x| x.as_str())
+                        .ok_or_else(|| dmlerr!())?
+                        .contains(&epid)
+                    {
                         page = i + 1;
                         break;
                     }
@@ -168,22 +224,58 @@ impl Bilibili {
         };
         self.ctx.cm.bvideo_info.borrow_mut().current_page = page;
 
-        let bvid = ep.pointer("/bvid").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?.to_string();
-        let cid = ep.pointer("/cid").and_then(|x| x.as_i64()).ok_or_else(|| dmlerr!())?.to_string();
-        let title = ep.pointer("/share_copy").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?.to_string();
-        let link = ep.pointer("/link").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?.to_string();
+        let bvid = ep
+            .pointer("/bvid")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
+        let cid = ep
+            .pointer("/cid")
+            .and_then(|x| x.as_i64())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
+        let title = ep
+            .pointer("/share_copy")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
+        let link = ep
+            .pointer("/link")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?
+            .to_string();
 
         Ok((bvid, cid, format!("{} - {}", &title, page), link))
     }
 
-    pub async fn get_page_info(&self, html: &str, mut page: usize) -> Result<(String, String, String, String)> {
+    pub async fn get_page_info(
+        &self,
+        html: &str,
+        mut page: usize,
+    ) -> Result<(String, String, String, String)> {
         let re = Regex::new(r"__INITIAL_STATE__=(\{.+?\});").unwrap();
-        let j: serde_json::Value =
-            serde_json::from_str(re.captures(html).and_then(|x| x.get(1)).ok_or_else(|| dmlerr!())?.as_str())?;
-        let bvid = j.pointer("/videoData/bvid").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-        let title = j.pointer("/videoData/title").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-        let artist = j.pointer("/videoData/owner/name").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
-        let j = j.pointer("/videoData/pages").and_then(|x| x.as_array()).ok_or_else(|| dmlerr!())?;
+        let j: serde_json::Value = serde_json::from_str(
+            re.captures(html)
+                .and_then(|x| x.get(1))
+                .ok_or_else(|| dmlerr!())?
+                .as_str(),
+        )?;
+        let bvid = j
+            .pointer("/videoData/bvid")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?;
+        let title = j
+            .pointer("/videoData/title")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?;
+        let artist = j
+            .pointer("/videoData/owner/name")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| dmlerr!())?;
+        let j = j
+            .pointer("/videoData/pages")
+            .and_then(|x| x.as_array())
+            .ok_or_else(|| dmlerr!())?;
         if page == 0 {
             page = 1;
         }
@@ -196,11 +288,17 @@ impl Bilibili {
         };
         self.ctx.cm.bvideo_info.borrow_mut().current_page = page;
 
-        let cid = p.pointer("/cid").and_then(|x| x.as_u64()).ok_or_else(|| dmlerr!())?;
+        let cid = p
+            .pointer("/cid")
+            .and_then(|x| x.as_u64())
+            .ok_or_else(|| dmlerr!())?;
         let final_title = if j.len() == 1 {
             format!("{} - {}", title, artist)
         } else {
-            let subtitle = p.pointer("/part").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?;
+            let subtitle = p
+                .pointer("/part")
+                .and_then(|x| x.as_str())
+                .ok_or_else(|| dmlerr!())?;
             format!("{} - {} - {} - {}", title, page, subtitle, artist)
         };
 
@@ -216,13 +314,30 @@ impl Bilibili {
         let f1 = |j: &serde_json::Value, ret: &mut HashMap<_, _>| -> _ {
             let mut videos = HashMap::new();
             let mut audios = HashMap::new();
-            for ele in j.pointer("/dash/video").and_then(|x| x.as_array()).ok_or_else(|| dmlerr!())? {
-                let mut id = ele.pointer("/id").and_then(|x| x.as_u64()).ok_or_else(|| dmlerr!())? * 10;
-                if ele.pointer("/codecid").and_then(|x| x.as_u64()).ok_or_else(|| dmlerr!())?.eq(&7) {
+            for ele in j
+                .pointer("/dash/video")
+                .and_then(|x| x.as_array())
+                .ok_or_else(|| dmlerr!())?
+            {
+                let mut id = ele
+                    .pointer("/id")
+                    .and_then(|x| x.as_u64())
+                    .ok_or_else(|| dmlerr!())?
+                    * 10;
+                if ele
+                    .pointer("/codecid")
+                    .and_then(|x| x.as_u64())
+                    .ok_or_else(|| dmlerr!())?
+                    .eq(&7)
+                {
                     id += 1;
                 }
                 let mut ul = Vec::new();
-                ul.push(ele.pointer("/base_url").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?);
+                ul.push(
+                    ele.pointer("/base_url")
+                        .and_then(|x| x.as_str())
+                        .ok_or_else(|| dmlerr!())?,
+                );
                 ele.pointer("/backup_url")
                     .and_then(|x| x.as_array())
                     .ok_or_else(|| dmlerr!())?
@@ -230,33 +345,59 @@ impl Bilibili {
                     .for_each(|x| ul.push(x.as_str().unwrap()));
                 videos.insert(
                     id,
-                    ul.iter().find(|&&x| !x.contains("mcdn")).ok_or_else(|| dmlerr!())?.to_string(),
+                    ul.iter()
+                        .find(|&&x| !x.contains("mcdn"))
+                        .ok_or_else(|| dmlerr!())?
+                        .to_string(),
                 );
             }
-            for ele in j.pointer("/dash/audio").and_then(|x| x.as_array()).ok_or_else(|| dmlerr!())? {
+            for ele in j
+                .pointer("/dash/audio")
+                .and_then(|x| x.as_array())
+                .ok_or_else(|| dmlerr!())?
+            {
                 let mut ul = Vec::new();
-                ul.push(ele.pointer("/base_url").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?);
+                ul.push(
+                    ele.pointer("/base_url")
+                        .and_then(|x| x.as_str())
+                        .ok_or_else(|| dmlerr!())?,
+                );
                 ele.pointer("/backup_url")
                     .and_then(|x| x.as_array())
                     .ok_or_else(|| dmlerr!())?
                     .iter()
                     .for_each(|x| ul.push(x.as_str().unwrap()));
                 audios.insert(
-                    ele.pointer("/id").and_then(|x| x.as_u64()).ok_or_else(|| dmlerr!())?,
-                    ul.iter().find(|&&x| !x.contains("mcdn")).ok_or_else(|| dmlerr!())?.to_string(),
+                    ele.pointer("/id")
+                        .and_then(|x| x.as_u64())
+                        .ok_or_else(|| dmlerr!())?,
+                    ul.iter()
+                        .find(|&&x| !x.contains("mcdn"))
+                        .ok_or_else(|| dmlerr!())?
+                        .to_string(),
                 );
             }
             if let Some(ele) = j.pointer("/dash/flac/audio") {
                 let mut ul = Vec::new();
-                ul.push(ele.pointer("/base_url").and_then(|x| x.as_str()).ok_or_else(|| dmlerr!())?);
+                ul.push(
+                    ele.pointer("/base_url")
+                        .and_then(|x| x.as_str())
+                        .ok_or_else(|| dmlerr!())?,
+                );
                 ele.pointer("/backup_url")
                     .and_then(|x| x.as_array())
                     .ok_or_else(|| dmlerr!())?
                     .iter()
                     .for_each(|x| ul.push(x.as_str().unwrap()));
                 audios.insert(
-                    ele.pointer("/id").and_then(|x| x.as_u64()).ok_or_else(|| dmlerr!())? + 100,
-                    ul.iter().find(|&&x| !x.contains("mcdn")).ok_or_else(|| dmlerr!())?.to_string(),
+                    ele.pointer("/id")
+                        .and_then(|x| x.as_u64())
+                        .ok_or_else(|| dmlerr!())?
+                        + 100,
+                    ul.iter()
+                        .find(|&&x| !x.contains("mcdn"))
+                        .ok_or_else(|| dmlerr!())?
+                        .to_string(),
                 );
             }
             ret.insert(
@@ -290,13 +431,25 @@ impl Bilibili {
             let (_bvid, cid, title, link) = self.get_page_info_ep(&u, page).await?;
             ret.insert("title", title);
             ret.insert("bili_cid", cid);
-            let resp =
-                client.get(&link).header("Referer", &link).header("Cookie", cookies).send().await?.text().await?;
+            let resp = client
+                .get(&link)
+                .header("Referer", &link)
+                .header("Cookie", cookies)
+                .send()
+                .await?
+                .text()
+                .await?;
             let re = Regex::new(r"const\s*playurlSSRData\s*=\s*(\{.+\})").unwrap();
-            let j: serde_json::Value =
-                serde_json::from_str(re.captures(&resp).and_then(|x| x.get(1)).ok_or_else(|| dmlerr!())?.as_str())?;
+            let j: serde_json::Value = serde_json::from_str(
+                re.captures(&resp)
+                    .and_then(|x| x.get(1))
+                    .ok_or_else(|| dmlerr!())?
+                    .as_str(),
+            )?;
             // println!("{:?}", &resp);
-            let j = j.pointer("/data/result/video_info").ok_or_else(|| dmlerr!())?;
+            let j = j
+                .pointer("/data/result/video_info")
+                .ok_or_else(|| dmlerr!())?;
             // println!("{:?}", &j);
             f1(&j, &mut ret)?;
         } else {
@@ -308,7 +461,14 @@ impl Bilibili {
                 self.ctx.cm.bvideo_info.borrow().current_page.to_string()
             };
             param1.push(("p", p));
-            let resp = client.get(&u).header("Cookie", &cookies).query(&param1).send().await?.text().await?;
+            let resp = client
+                .get(&u)
+                .header("Cookie", &cookies)
+                .query(&param1)
+                .send()
+                .await?
+                .text()
+                .await?;
             let (bvid, cid, title, _artist) = self.get_page_info(&resp, page).await?;
             // println!("{} {} {} {}", &bvid, &cid, &title, &artist);
             // let re = Regex::new(r"window.__playinfo__\s*=\s*(\{.+?\})\s*</script>").unwrap();

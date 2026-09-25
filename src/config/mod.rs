@@ -135,13 +135,23 @@ impl ConfigManager {
                     bvinfo.current_page = q.1.parse().unwrap();
                 }
             }
-            let vid = u.path_segments().unwrap().filter(|x| !x.is_empty()).last().unwrap().to_string();
+            let vid = u
+                .path_segments()
+                .unwrap()
+                .filter(|x| !x.is_empty())
+                .last()
+                .unwrap()
+                .to_string();
             if vid.starts_with("BV") || vid.starts_with("av") {
                 bvinfo.video_type = BVideoType::Video;
-                bvinfo.base_url.push_str(format!("https://www.bilibili.com/video/{}", vid).as_str());
+                bvinfo
+                    .base_url
+                    .push_str(format!("https://www.bilibili.com/video/{}", vid).as_str());
             } else {
                 bvinfo.video_type = BVideoType::Bangumi;
-                bvinfo.base_url.push_str(format!("https://www.bilibili.com/bangumi/play/{}", vid).as_str());
+                bvinfo
+                    .base_url
+                    .push_str(format!("https://www.bilibili.com/bangumi/play/{}", vid).as_str());
             }
             site_type = SiteType::Video;
             Site::BiliVideo
@@ -234,7 +244,11 @@ impl ConfigManager {
             if !config_path.exists() {
                 let _ = tokio::fs::File::create(&config_path).await;
             }
-            let mut f = OpenOptions::new().write(true).truncate(true).open(config_path).await?;
+            let mut f = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(config_path)
+                .await?;
             f.write_all(
                 toml::to_string_pretty(&Config {
                     bcookie: Some(self.bcookie.clone()),

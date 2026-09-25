@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use crate::{dmlerr, utils};
 
 pub async fn get_live_info(
-    client: &Client, room_url: &str,
+    client: &Client,
+    room_url: &str,
 ) -> anyhow::Result<(String, String, String, bool, String, String)> {
     let resp = client
         .get(room_url)
@@ -20,17 +21,38 @@ pub async fn get_live_info(
 
     let re_cover = Regex::new(r#"link\s+rel="image_src"\s+href="([^"]+)""#).unwrap();
     let re_owner = Regex::new(r#"meta\s+property="og:title"\s+content="([^"]+)""#).unwrap();
-    let avatar = re_cover.captures(&resp).and_then(|x| x.get(1)).map(|x| x.as_str());
-    let owner = re_owner.captures(&resp).and_then(|x| x.get(1)).map(|x| x.as_str());
+    let avatar = re_cover
+        .captures(&resp)
+        .and_then(|x| x.get(1))
+        .map(|x| x.as_str());
+    let owner = re_owner
+        .captures(&resp)
+        .and_then(|x| x.get(1))
+        .map(|x| x.as_str());
 
     let re = Regex::new(r"ytInitialPlayerResponse\s*=\s*(\{.+?\});.*?</script>").unwrap();
-    let j: Option<serde_json::Value> =
-        serde_json::from_str(re.captures(&resp).and_then(|x| x.get(1)).map_or("", |x| x.as_str())).ok();
+    let j: Option<serde_json::Value> = serde_json::from_str(
+        re.captures(&resp)
+            .and_then(|x| x.get(1))
+            .map_or("", |x| x.as_str()),
+    )
+    .ok();
     let j = j.as_ref();
-    let owner = j.and_then(|x| x.pointer("/videoDetails/author")?.as_str()).or(owner).ok_or_else(|| dmlerr!())?;
-    let title = j.and_then(|x| x.pointer("/videoDetails/title")?.as_str()).unwrap_or("没有直播标题");
+    let owner = j
+        .and_then(|x| x.pointer("/videoDetails/author")?.as_str())
+        .or(owner)
+        .ok_or_else(|| dmlerr!())?;
+    let title = j
+        .and_then(|x| x.pointer("/videoDetails/title")?.as_str())
+        .unwrap_or("没有直播标题");
     let cover = j
-        .and_then(|x| x.pointer("/videoDetails/thumbnail/thumbnails")?.as_array()?.last()?.pointer("/url")?.as_str())
+        .and_then(|x| {
+            x.pointer("/videoDetails/thumbnail/thumbnails")?
+                .as_array()?
+                .last()?
+                .pointer("/url")?
+                .as_str()
+        })
         .or(avatar)
         .ok_or_else(|| dmlerr!())?;
     let cid = j
@@ -42,9 +64,13 @@ pub async fn get_live_info(
                 .strip_prefix("@")
         })
         .unwrap_or("");
-    let is_live = j.and_then(|x| x.pointer("/videoDetails/isLive")?.as_bool()).unwrap_or(false);
+    let is_live = j
+        .and_then(|x| x.pointer("/videoDetails/isLive")?.as_bool())
+        .unwrap_or(false);
 
-    let mpd_url = j.and_then(|x| x.pointer("/streamingData/dashManifestUrl")?.as_str()).unwrap_or("");
+    let mpd_url = j
+        .and_then(|x| x.pointer("/streamingData/dashManifestUrl")?.as_str())
+        .unwrap_or("");
     // let hls_url = j.pointer("/streamingData/hlsManifestUrl").ok_or_else(|| dmlerr!())?.as_str().unwrap();
 
     Ok((
@@ -65,7 +91,10 @@ impl Youtube {
     }
 
     #[allow(dead_code)]
-    pub async fn decode_mpd(client: &Client, url: &str) -> anyhow::Result<HashMap<&'static str, String>> {
+    pub async fn decode_mpd(
+        client: &Client,
+        url: &str,
+    ) -> anyhow::Result<HashMap<&'static str, String>> {
         info!("{url}");
         let mut ret = HashMap::new();
         let mut video_base_url = Vec::new();
@@ -84,7 +113,8 @@ impl Youtube {
         let elem_vs: Vec<roxmltree::Node> = doc
             .descendants()
             .filter(|n| {
-                n.tag_name().name() == "AdaptationSet" && n.attribute("mimeType").unwrap_or("").contains("video")
+                n.tag_name().name() == "AdaptationSet"
+                    && n.attribute("mimeType").unwrap_or("").contains("video")
             })
             .collect();
         let mut tmpnode = None;
@@ -106,7 +136,10 @@ impl Youtube {
         }
         let elem_a = doc
             .descendants()
-            .find(|n| n.tag_name().name() == "AdaptationSet" && n.attribute("mimeType").unwrap_or("").contains("audio"))
+            .find(|n| {
+                n.tag_name().name() == "AdaptationSet"
+                    && n.attribute("mimeType").unwrap_or("").contains("audio")
+            })
             .unwrap();
         for e in elem_a.descendants() {
             if e.has_attribute("bandwidth") {
