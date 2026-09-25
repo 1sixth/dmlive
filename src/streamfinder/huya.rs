@@ -21,15 +21,14 @@ fn gen_n_number(l: u8) -> String {
 fn gen_params(anti_code: &str, stream_name: &str) -> String {
     let mut query: HashMap<String, String> = form_urlencoded::parse(anti_code.as_bytes()).into_owned().collect();
 
-    let uid = gen_n_number(13);
-    query.insert("t".to_string(), "102".to_string());
-    query.insert("ctype".to_string(), "tars_mp".to_string());
+    let uid = gen_n_number(13).parse::<u64>().unwrap();
+    // Match the web client that supplied the anti-code. Mixing in mini-app
+    // parameters (tars_mp/102) causes Huya to close the stream after 120 seconds.
+    query.insert("t".to_string(), "100".to_string());
+    let convert_uid = (uid & !0xffff_ffff) | u64::from((uid as u32).rotate_left(8));
 
-    let ws_time = format!("{:x}", (chrono::Utc::now().timestamp() + 21600));
-    let seq_id = format!(
-        "{}",
-        (chrono::Utc::now().timestamp_millis() + uid.parse::<i64>().unwrap())
-    );
+    let ws_time = query.get("wsTime").unwrap().to_string();
+    let seq_id = format!("{}", (chrono::Utc::now().timestamp_millis() + uid as i64));
 
     let fm = String::from_utf8(general_purpose::STANDARD.decode(query.get("fm").unwrap()).unwrap()).unwrap();
     let ws_secret_prefix = fm.split("_").next().unwrap();
@@ -45,7 +44,7 @@ fn gen_params(anti_code: &str, stream_name: &str) -> String {
         )
     );
     let ws_secret =
-        md5::compute(format!("{ws_secret_prefix}_{uid}_{stream_name}_{ws_secret_hash}_{ws_time}",).as_bytes());
+        md5::compute(format!("{ws_secret_prefix}_{convert_uid}_{stream_name}_{ws_secret_hash}_{ws_time}",).as_bytes());
     let ws_secret = format!("{ws_secret:x}",);
 
     let mut params = vec![
@@ -55,7 +54,7 @@ fn gen_params(anti_code: &str, stream_name: &str) -> String {
         ("ctype", query.get("ctype").unwrap().to_string()),
         ("ver", "1".to_string()),
         ("fs", query.get("fs").unwrap().to_string()),
-        ("uid", uid),
+        ("u", convert_uid.to_string()),
         ("uuid", gen_n_number(10)),
         ("t", query.get("t").unwrap().to_string()),
         ("sv", "2401231033".to_string()),
